@@ -1,11 +1,7 @@
-// This should only be used in development and testing environments.
-// It will store the functions that won't be used in production.
-use crate::Candle;
+use crate::domain::entities::Candle;
 
 use chrono::{DateTime, Utc};
-use polars::{prelude::*,
-            frame::row::Row
-};
+use polars::{frame::row::Row, prelude::*};
 use std::fs::File;
 
 pub fn get_data() -> Result<DataFrame, PolarsError> {
@@ -13,10 +9,9 @@ pub fn get_data() -> Result<DataFrame, PolarsError> {
         .finish()
 }
 
-// Because a Row.0 is vec of AnyValue, I iter over it
-// The form I have in data is: datetime, open, high, low, close, volume
-// It checks the type of each value and returns a Candle struct
-pub fn parse_candle(row: Row) -> Result<Candle, String> {
+pub fn parse_candle(
+    row: Row
+) -> Result<Candle, String> {
     let datetime = if let AnyValue::Datetime(ts, TimeUnit::Microseconds, _) = row.0[0] {
         DateTime::<Utc>::from_naive_utc_and_offset(
             DateTime::from_timestamp_micros(ts).expect("timestamp invalide").naive_local(),
