@@ -1,5 +1,5 @@
 use crate::adapters::data_loader::{get_data, parse_candle};
-use crate::domain::{entities::Candle, ports::DataSender};
+use crate::domain::{entities::candle::Candle, ports::DataSender};
 
 use tokio::time::{sleep, Duration};
 
