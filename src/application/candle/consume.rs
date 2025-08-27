@@ -9,13 +9,13 @@ pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(
     receiver: &S,
 ) {
     while let Some(candle) = receiver.receive_data().await {
-        for timerange in TIMERANGES {
-            scope(|s| {
+        scope(|s| {
+            for timerange in TIMERANGES {
                 s.spawn(async {
                     aggregate_candle(&candle, timerange).await;
                 });
-            });
-        }
+            }
+        });
     }
 }
 
