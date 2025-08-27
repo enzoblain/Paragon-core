@@ -1,3 +1,4 @@
+use crate::domain::entities::symbol::Symbol;
 use crate::domain::entities::timerange::Timerange;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -5,9 +6,9 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use std::cmp::Ordering;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Candle {
-    pub symbol: String,
+    pub symbol: Symbol,
     pub timerange: &'static Timerange,
     pub timestamp: DateTime<Utc>,
     pub end_timestamp: DateTime<Utc>,
@@ -19,7 +20,7 @@ pub struct Candle {
     pub direction: Direction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Direction {
     Bullish,
     Bearish,
@@ -28,7 +29,7 @@ pub enum Direction {
 
 impl Candle {
     pub fn new(
-        symbol: String,
+        symbol: Symbol,
         timerange: &'static Timerange,
         timestamp: DateTime<Utc>,
         open: f64,
@@ -54,7 +55,10 @@ impl Candle {
         }
     }
 
-    fn align_timestamps(timestamp: DateTime<Utc>, duration_ms: i64) -> (DateTime<Utc>, DateTime<Utc>) {
+    fn align_timestamps(
+        timestamp: DateTime<Utc>, 
+        duration_ms: i64
+    ) -> (DateTime<Utc>, DateTime<Utc>) {
         let aligned = Utc.timestamp_millis_opt(
             (timestamp.timestamp_millis() / duration_ms) * duration_ms
         ).single().unwrap();
@@ -63,7 +67,10 @@ impl Candle {
         (aligned, end)
     }
 
-    fn compute_direction(open: f64, close: f64) -> Direction {
+    fn compute_direction(
+        open: f64, 
+        close: f64
+    ) -> Direction {
         match close.partial_cmp(&open) {
             Some(Ordering::Greater) => Direction::Bullish,
             Some(Ordering::Less) => Direction::Bearish,
@@ -74,6 +81,6 @@ impl Candle {
 
 // Stores the current state of all candles.
 // Enables modification of candles when new data is received for an ongoing time range.
-pub static CANDLES: Lazy<DashMap<String, Candle>> = Lazy::new(|| {
+pub static CANDLES: Lazy<DashMap<(Symbol, &'static str), Candle>> = Lazy::new(|| {
     DashMap::new()
 });

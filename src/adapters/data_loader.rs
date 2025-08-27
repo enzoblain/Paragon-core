@@ -1,4 +1,6 @@
-use crate::domain::entities::{candle::Candle, timerange::TIMERANGES};
+use crate::domain::entities::candle::Candle;
+use crate::domain::entities::symbol::Symbol;
+use crate::domain::entities::timerange::TIMERANGES;
 
 use chrono::{DateTime, Utc};
 use polars::{frame::row::Row, prelude::*};
@@ -53,7 +55,7 @@ pub fn parse_candle(
 
 
     Ok(Candle::new(
-        "EURUSD".to_string(), // EUR/USD is the only symbol in the data
+        Symbol::EURUSD, // EUR/USD is the only symbol in the data
         &TIMERANGES[0], // We only add 1m candles for now
         datetime,
         open,

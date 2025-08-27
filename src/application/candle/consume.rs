@@ -23,7 +23,7 @@ pub async fn aggregate_candle(
     candle: &Candle,
     timerange: &'static Timerange
 ) {
-    let key = format!("{}-{}", candle.symbol, timerange.label);
+    let key = (candle.symbol, timerange.label);
 
     if let Some(mut last_candle) = CANDLES.get_mut(&key) {
         // If the new candle's timestamp is within the current candle's time range
@@ -34,7 +34,7 @@ pub async fn aggregate_candle(
             // TODO: process trend
 
             *last_candle = Candle::new(
-                candle.symbol.clone(),
+                candle.symbol,
                 timerange,
                 candle.timestamp,
                 candle.open,
@@ -52,7 +52,7 @@ pub async fn aggregate_candle(
     } else {
         // If there isn't candle stored in the actual timerange
         let new_candle = Candle::new(
-            candle.symbol.clone(),
+            candle.symbol,
             timerange,
             candle.timestamp,
             candle.open,
