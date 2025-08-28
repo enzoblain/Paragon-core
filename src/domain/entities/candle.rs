@@ -1,3 +1,4 @@
+use crate::domain::entities::direction::Direction;
 use crate::domain::entities::symbol::Symbol;
 use crate::domain::entities::timerange::Timerange;
 
@@ -6,7 +7,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use std::cmp::Ordering;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Candle {
     pub symbol: Symbol,
     pub timerange: &'static Timerange,
@@ -18,13 +19,6 @@ pub struct Candle {
     pub close: f64,
     pub volume: f64,
     pub direction: Direction,
-}
-
-#[derive(Debug)]
-pub enum Direction {
-    Bullish,
-    Bearish,
-    Doji,
 }
 
 impl Candle {

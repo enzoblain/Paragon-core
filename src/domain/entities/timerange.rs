@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq,Hash, PartialEq)]
 pub struct Timerange {
     pub label: &'static str,
     pub duration_ms: i64,

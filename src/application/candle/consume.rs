@@ -1,8 +1,8 @@
 use crate::application::structures::session::process_session;
-use crate::{domain::{
-    entities::{candle::{Candle, CANDLES}, timerange::{Timerange, TIMERANGES}},
-    ports::DataReceiver,
-}};
+use crate::application::structures::structures::process_fvg;
+use crate::domain::entities::candle::{Candle, CANDLES};
+use crate::domain::entities::timerange::{Timerange, TIMERANGES};
+use crate::domain::ports::DataReceiver;
 
 use tokio_scoped::scope;
 
@@ -10,8 +10,6 @@ pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(
     receiver: &S,
 ) {
     while let Some(candle) = receiver.receive_data().await {
-        let start = std::time::Instant::now();
-
         scope(|s| {
             for timerange in TIMERANGES {
                 s.spawn(async {
@@ -23,9 +21,6 @@ pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(
                 process_session(&candle).await;
             });
         });
-
-        let duration = start.elapsed();
-        println!("Processing candle took {:?}", duration);
     }
 }
 
@@ -40,8 +35,9 @@ pub async fn aggregate_candle(
         if candle.timestamp >= last_candle.end_timestamp {
             // TODO: send the candle via websocket
             // TODO: add the candle to the db
-            // TODO: process fvg
             // TODO: process trend
+
+            process_fvg(&*last_candle).await;
 
             *last_candle = Candle::new(
                 candle.symbol,

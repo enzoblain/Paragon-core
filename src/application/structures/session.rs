@@ -21,6 +21,7 @@ pub async fn process_session(
         // TODO: Add to the database
     }
     // If there is no actual session in the same symbol
+    // Or if we need to create a new session
     let session = Session::new(&candle);
 
     // TODO: Send via websocket
