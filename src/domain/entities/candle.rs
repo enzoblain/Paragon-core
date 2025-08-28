@@ -22,6 +22,7 @@ pub struct Candle {
 }
 
 impl Candle {
+    #[allow(clippy::too_many_arguments)] // Cannot do anything about it
     pub fn new(
         symbol: Symbol,
         timerange: &'static Timerange,
@@ -50,21 +51,19 @@ impl Candle {
     }
 
     fn align_timestamps(
-        timestamp: DateTime<Utc>, 
-        duration_ms: i64
+        timestamp: DateTime<Utc>,
+        duration_ms: i64,
     ) -> (DateTime<Utc>, DateTime<Utc>) {
-        let aligned = Utc.timestamp_millis_opt(
-            (timestamp.timestamp_millis() / duration_ms) * duration_ms
-        ).single().unwrap();
+        let aligned = Utc
+            .timestamp_millis_opt((timestamp.timestamp_millis() / duration_ms) * duration_ms)
+            .single()
+            .unwrap();
         let end = aligned + Duration::milliseconds(duration_ms);
 
         (aligned, end)
     }
 
-    fn compute_direction(
-        open: f64, 
-        close: f64
-    ) -> Direction {
+    fn compute_direction(open: f64, close: f64) -> Direction {
         match close.partial_cmp(&open) {
             Some(Ordering::Greater) => Direction::Bullish,
             Some(Ordering::Less) => Direction::Bearish,
@@ -75,6 +74,4 @@ impl Candle {
 
 // Stores the current state of all candles.
 // Enables modification of candles when new data is received for an ongoing time range.
-pub static CANDLES: Lazy<DashMap<(Symbol, &'static str), Candle>> = Lazy::new(|| {
-    DashMap::new()
-});
+pub static CANDLES: Lazy<DashMap<(Symbol, &'static str), Candle>> = Lazy::new(DashMap::new);

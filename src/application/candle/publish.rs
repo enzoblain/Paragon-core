@@ -3,9 +3,7 @@ use crate::domain::{entities::candle::Candle, ports::DataSender};
 
 use tokio::time::{sleep, Duration};
 
-pub async fn publish_candles<S: DataSender<Candle> + ?Sized>(
-    sender: &S,
-) {
+pub async fn publish_candles<S: DataSender<Candle> + ?Sized>(sender: &S) {
     let data = get_data().map_err(|e| e.to_string()).unwrap();
 
     for index in 0..data.height() {

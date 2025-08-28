@@ -2,14 +2,10 @@ use crate::domain::entities::candle::Candle;
 use crate::domain::entities::direction::Direction;
 use crate::domain::entities::structures::LAST_THREE_CANDLES;
 
-pub async fn process_fvg(
-    candle: &Candle
-) {
+pub async fn process_fvg(candle: &Candle) {
     let key = (candle.symbol, candle.timerange);
 
-    let mut last_three_candles = LAST_THREE_CANDLES
-        .entry(key)
-        .or_insert_with(Vec::new);
+    let mut last_three_candles = LAST_THREE_CANDLES.entry(key).or_default();
 
     last_three_candles.push(candle.clone());
 
@@ -40,7 +36,7 @@ pub async fn process_fvg(
                 // TODO: Send FVG to websocket
                 // TODO: Add FVG to database
             }
-        },
+        }
         Direction::Bearish => {
             let first = &last_three_candles[0];
             let third = &last_three_candles[2];
@@ -49,7 +45,7 @@ pub async fn process_fvg(
                 // TODO: Send FVG to websocket
                 // TODO: Add FVG to database
             }
-        },
-        Direction::Doji => {},
+        }
+        Direction::Doji => {}
     }
 }

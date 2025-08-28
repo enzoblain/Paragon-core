@@ -7,16 +7,15 @@ use polars::{frame::row::Row, prelude::*};
 use std::fs::File;
 
 pub fn get_data() -> Result<DataFrame, PolarsError> {
-    ParquetReader::new(File::open("data/EURUSD.parquet")?)
-        .finish()
+    ParquetReader::new(File::open("data/EURUSD.parquet")?).finish()
 }
 
-pub fn parse_candle(
-    row: Row
-) -> Result<Candle, String> {
+pub fn parse_candle(row: Row) -> Result<Candle, String> {
     let datetime = if let AnyValue::Datetime(ts, TimeUnit::Microseconds, _) = row.0[0] {
         DateTime::<Utc>::from_naive_utc_and_offset(
-            DateTime::from_timestamp_micros(ts).expect("timestamp invalide").naive_local(),
+            DateTime::from_timestamp_micros(ts)
+                .expect("timestamp invalide")
+                .naive_local(),
             Utc,
         )
     } else {
@@ -52,7 +51,6 @@ pub fn parse_candle(
     } else {
         Err("Invalid 'volume' value in row: {row}")?
     };
-
 
     Ok(Candle::new(
         Symbol::EURUSD, // EUR/USD is the only symbol in the data

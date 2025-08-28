@@ -18,18 +18,14 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn contains(
-        &self,
-        candle: &Candle
-    ) -> bool {
+    pub fn contains(&self, candle: &Candle) -> bool {
         candle.timestamp >= self.start_time && candle.timestamp < self.end_time
     }
 
-    pub fn new(
-        candle: &Candle
-    ) -> Self {
+    pub fn new(candle: &Candle) -> Self {
         let ref_sessions = RefSessions::from_timestamp(candle.timestamp.time()).unwrap();
-        let (start_time, end_time) = RefSessions::get_start_end_datetime(&ref_sessions, candle.timestamp);
+        let (start_time, end_time) =
+            RefSessions::get_start_end_datetime(&ref_sessions, candle.timestamp);
 
         Self {
             symbol: candle.symbol,
@@ -48,7 +44,7 @@ impl Session {
 pub struct RefSession {
     pub label: &'static str,
     pub start: NaiveTime,
-    pub end: NaiveTime, 
+    pub end: NaiveTime,
 }
 
 // All the sessions are in UTC time
@@ -79,31 +75,32 @@ pub enum RefSessions {
 impl RefSessions {
     pub fn get_start_end_datetime(
         ref_session: &RefSessions,
-        timestamp: DateTime<Utc>
+        timestamp: DateTime<Utc>,
     ) -> (DateTime<Utc>, DateTime<Utc>) {
         let mut start_date = timestamp.date_naive();
         let mut end_date = timestamp.date_naive();
 
         // Overnight session adjustment
         if std::ptr::eq(ref_session, &RefSessions::Asian) {
-            if timestamp.hour() < REFSESSIONS[0].start.hour() || timestamp.hour() == REFSESSIONS[0].start.hour() && timestamp.minute() < REFSESSIONS[0].start.minute() {
-                start_date = start_date - Duration::days(1);
+            if timestamp.hour() < REFSESSIONS[0].start.hour()
+                || timestamp.hour() == REFSESSIONS[0].start.hour()
+                    && timestamp.minute() < REFSESSIONS[0].start.minute()
+            {
+                start_date -= -Duration::days(1);
             } else {
-                end_date = end_date - Duration::days(1);
+                end_date += Duration::days(1);
             }
         }
 
         let (start_time, end_time) = Self::get_start_end_time(ref_session);
-        
+
         let start = NaiveDateTime::new(start_date, start_time);
         let end = NaiveDateTime::new(end_date, end_time);
 
         (start.and_utc(), end.and_utc())
     }
 
-    pub fn get_start_end_time(
-        ref_session: &RefSessions,
-    ) -> (NaiveTime, NaiveTime) {
+    pub fn get_start_end_time(ref_session: &RefSessions) -> (NaiveTime, NaiveTime) {
         match ref_session {
             RefSessions::Asian => (REFSESSIONS[0].start, REFSESSIONS[0].end),
             RefSessions::London => (REFSESSIONS[1].start, REFSESSIONS[1].end),
@@ -111,9 +108,7 @@ impl RefSessions {
         }
     }
 
-    pub fn from_session(
-        session: &RefSession
-    ) -> Option<Self> {
+    pub fn from_session(session: &RefSession) -> Option<Self> {
         if std::ptr::eq(session, &REFSESSIONS[0]) {
             Some(RefSessions::Asian)
         } else if std::ptr::eq(session, &REFSESSIONS[1]) {
@@ -125,9 +120,7 @@ impl RefSessions {
         }
     }
 
-    pub fn from_timestamp(
-        timestamp: NaiveTime
-    ) -> Option<Self> {
+    pub fn from_timestamp(timestamp: NaiveTime) -> Option<Self> {
         for session in REFSESSIONS {
             if session.start <= session.end {
                 if timestamp >= session.start && timestamp < session.end {
@@ -144,6 +137,4 @@ impl RefSessions {
     }
 }
 
-pub static SESSIONS: Lazy<DashMap<Symbol, Session>> = Lazy::new(|| {
-    DashMap::new()
-});
+pub static SESSIONS: Lazy<DashMap<Symbol, Session>> = Lazy::new(DashMap::new);
