@@ -1,6 +1,6 @@
 use crate::domain::entities::candle::Candle;
 use crate::domain::entities::direction::Direction;
-use crate::domain::entities::structures::LAST_THREE_CANDLES;
+use crate::domain::entities::fvg::LAST_THREE_CANDLES;
 
 pub async fn process_fvg(candle: &Candle) {
     let key = (candle.symbol, candle.timerange);

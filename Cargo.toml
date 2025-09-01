@@ -3,6 +3,11 @@ name = "core"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+
 [dependencies]
 chrono = "0.4.41"
 dashmap = "6.1.0"

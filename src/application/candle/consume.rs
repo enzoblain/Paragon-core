@@ -1,5 +1,6 @@
 use crate::application::structures::fvg::process_fvg;
 use crate::application::structures::session::process_session;
+use crate::application::structures::trend::process_trend;
 use crate::domain::entities::candle::{Candle, CANDLES};
 use crate::domain::entities::timerange::{Timerange, TIMERANGES};
 use crate::domain::ports::DataReceiver;
@@ -30,8 +31,8 @@ pub async fn aggregate_candle(candle: &Candle, timerange: &'static Timerange) {
         if candle.timestamp >= last_candle.end_timestamp {
             // TODO: send the candle via websocket
             // TODO: add the candle to the db
-            // TODO: process trend
 
+            process_trend(&last_candle).await;
             process_fvg(&last_candle).await;
 
             *last_candle = Candle::new(
