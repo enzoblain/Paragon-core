@@ -5,9 +5,10 @@ use crate::domain::entities::timerange::Timerange;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use std::cmp::Ordering;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Candle {
     pub symbol: Symbol,
     pub timerange: &'static Timerange,

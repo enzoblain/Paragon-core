@@ -1,8 +1,11 @@
+use crate::application::context::AppContext;
 use crate::domain::entities::candle::Candle;
+use crate::domain::entities::data::Data;
 use crate::domain::entities::direction::Direction;
 use crate::domain::entities::fvg::LAST_THREE_CANDLES;
+use crate::domain::entities::structures::{TwoDStructure, TwoDStructureLabel};
 
-pub async fn process_fvg(candle: &Candle) {
+pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
     let key = (candle.symbol, candle.timerange);
 
     let mut last_three_candles = LAST_THREE_CANDLES.entry(key).or_default();
@@ -33,8 +36,17 @@ pub async fn process_fvg(candle: &Candle) {
             let third = &last_three_candles[2];
 
             if third.close < first.open {
-                // TODO: Send FVG to websocket
-                // TODO: Add FVG to database
+                let fvg = Data::TwoDStructure(TwoDStructure {
+                    symbol: candle.symbol,
+                    label: TwoDStructureLabel::FVG,
+                    timerange: candle.timerange,
+                    timestamp: candle.timestamp,
+                    high: third.close,
+                    low: first.open,
+                    direction: Direction::Bullish,
+                });
+                let res = ctx.insert_data(&fvg).await;
+                let res = ctx.send_data(fvg).await;
             }
         }
         Direction::Bearish => {
@@ -42,8 +54,17 @@ pub async fn process_fvg(candle: &Candle) {
             let third = &last_three_candles[2];
 
             if third.close > first.open {
-                // TODO: Send FVG to websocket
-                // TODO: Add FVG to database
+                let fvg = Data::TwoDStructure(TwoDStructure {
+                    symbol: candle.symbol,
+                    label: TwoDStructureLabel::FVG,
+                    timerange: candle.timerange,
+                    timestamp: candle.timestamp,
+                    high: first.open,
+                    low: third.close,
+                    direction: Direction::Bearish,
+                });
+                let res = ctx.insert_data(&fvg).await;
+                let res = ctx.send_data(fvg).await;
             }
         }
         Direction::Doji => {}

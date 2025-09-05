@@ -6,6 +6,7 @@ use crate::domain::entities::timerange::Timerange;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
+use serde::Serialize;
 
 pub static QUEUE: Lazy<DashMap<(Symbol, &'static Timerange), Vec<Candle>>> =
     Lazy::new(DashMap::new);
@@ -13,6 +14,7 @@ pub static TRENDS: Lazy<DashMap<(Symbol, &'static Timerange), Trend>> = Lazy::ne
 pub static SUBTRENDS: Lazy<DashMap<(Symbol, &'static Timerange), Subtrend>> =
     Lazy::new(DashMap::new);
 
+#[derive(Clone, Serialize)]
 pub struct Trend {
     pub symbol: Symbol,
     pub timerange: Timerange,

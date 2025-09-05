@@ -1,6 +1,7 @@
 use crate::domain::ports::{DataReceiver, DataSender};
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
 pub struct ChannelAdapter<T> {
@@ -27,11 +28,23 @@ impl<T: Send + 'static> DataSender<T> for ChannelAdapter<T> {
     }
 }
 
+impl<T: Send + 'static> DataSender<T> for Arc<ChannelAdapter<T>> {
+    fn send_data(&self, data: T) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> {
+        (**self).send_data(data)
+    }
+}
+
 impl<T: Send + 'static> DataReceiver<T> for ChannelAdapter<T> {
     fn receive_data(&self) -> Pin<Box<dyn Future<Output = Option<T>> + Send + '_>> {
         Box::pin(async move {
             let mut rx_guard = self.rx.lock().await;
             rx_guard.recv().await
         })
+    }
+}
+
+impl<T: Send + 'static> DataReceiver<T> for Arc<ChannelAdapter<T>> {
+    fn receive_data(&self) -> Pin<Box<dyn Future<Output = Option<T>> + Send + '_>> {
+        (**self).receive_data()
     }
 }

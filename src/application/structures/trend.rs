@@ -1,17 +1,22 @@
 use chrono::{DateTime, Utc};
 
+use crate::application::context::AppContext;
 use crate::domain::entities::candle::Candle;
+use crate::domain::entities::data::Data;
 use crate::domain::entities::direction::Direction;
+use crate::domain::entities::structures::{
+    OneDStructure, OneDStructureLabel, TwoDStructure, TwoDStructureLabel,
+};
 use crate::domain::entities::symbol::Symbol;
 use crate::domain::entities::timerange::Timerange;
 use crate::domain::entities::trend::{Subtrend, Trend, QUEUE, SUBTRENDS, TRENDS};
 
-pub async fn process_trend(candle: &Candle) {
+pub async fn process_trend(ctx: &AppContext, candle: &Candle) {
     let key = (candle.symbol, candle.timerange);
     QUEUE.entry(key).or_default().push(candle.clone());
 
     loop {
-        let datetime = match get_trend(candle).await {
+        let datetime = match get_trend(ctx, candle).await {
             Some(dt) => dt,
             None => break,
         };
@@ -25,7 +30,7 @@ pub async fn process_trend(candle: &Candle) {
 
         let mut found = false;
         for candle in queue.iter() {
-            if let Some(datetime) = get_trend(candle).await {
+            if let Some(datetime) = get_trend(ctx, candle).await {
                 process_queue(&key, datetime);
 
                 found = true;
@@ -46,7 +51,7 @@ pub fn process_queue(key: &(Symbol, &'static Timerange), datetime: DateTime<Utc>
     }
 }
 
-pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
+pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc>> {
     let key = (candle.symbol, candle.timerange);
 
     let mut datetime = None;
@@ -68,11 +73,38 @@ pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
                             // And we can update the trend
                             trend.high = subtrend.high;
 
-                            // TODO: Send BoS to the websocket
-                            // TODO: Add BoS to the database
+                            let bos = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::BOS,
+                                timerange: candle.timerange,
+                                timestamp: candle.timestamp,
+                                price: subtrend.low,
+                                direction: Direction::Bearish,
+                            });
+                            let res = ctx.insert_data(&bos).await;
+                            let res = ctx.send_data(bos).await;
 
-                            // TODO: Send relative high/low to the websocket
-                            // TODO: Add relative high/low to the database
+                            let rh = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::RH,
+                                timerange: candle.timerange,
+                                timestamp: subtrend.last_relative_high_datetime,
+                                price: subtrend.high,
+                                direction: Direction::Bearish,
+                            });
+                            let res = ctx.insert_data(&rh).await;
+                            let res = ctx.send_data(rh).await;
+
+                            let rl = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::RL,
+                                timerange: candle.timerange,
+                                timestamp: subtrend.last_relative_low_datetime,
+                                price: subtrend.low,
+                                direction: Direction::Bearish,
+                            });
+                            let res = ctx.insert_data(&rl).await;
+                            let res = ctx.send_data(rl).await;
 
                             SUBTRENDS.remove(&key);
                         } else if candle.high > subtrend.high {
@@ -90,11 +122,38 @@ pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
                             // And we can update the trend
                             trend.low = subtrend.low;
 
-                            // TODO: Send BoS to the websocket
-                            // TODO: Add BoS to the database
+                            let bos = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::BOS,
+                                timerange: candle.timerange,
+                                timestamp: candle.timestamp,
+                                price: subtrend.high,
+                                direction: Direction::Bullish,
+                            });
+                            let res = ctx.insert_data(&bos).await;
+                            let res = ctx.send_data(bos).await;
 
-                            // TODO: Send relative high/low to the websocket
-                            // TODO: Add relative high/low to the database
+                            let rh = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::RH,
+                                timerange: candle.timerange,
+                                timestamp: subtrend.last_relative_high_datetime,
+                                price: subtrend.high,
+                                direction: Direction::Bullish,
+                            });
+                            let res = ctx.insert_data(&rh).await;
+                            let res = ctx.send_data(rh).await;
+
+                            let rl = Data::OneDStructure(OneDStructure {
+                                symbol: candle.symbol,
+                                label: OneDStructureLabel::RL,
+                                timerange: candle.timerange,
+                                timestamp: subtrend.last_relative_low_datetime,
+                                price: subtrend.low,
+                                direction: Direction::Bullish,
+                            });
+                            let res = ctx.insert_data(&rl).await;
+                            let res = ctx.send_data(rl).await;
 
                             SUBTRENDS.remove(&key);
                         } else if candle.low < subtrend.low {
@@ -128,11 +187,28 @@ pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
                         // This means that there is a reversal (Change Of Character)
                         datetime = Some(subtrend.start_time);
 
-                        // TODO: Send the OB to the websocket
-                        // TODO: Add the OB to the database
+                        let ob = Data::TwoDStructure(TwoDStructure {
+                            symbol: candle.symbol,
+                            label: TwoDStructureLabel::OB,
+                            timerange: candle.timerange,
+                            timestamp: candle.timestamp,
+                            high: subtrend.last_candle.high,
+                            low: subtrend.last_candle.low,
+                            direction: Direction::Bullish,
+                        });
+                        let res = ctx.insert_data(&ob).await;
+                        let res = ctx.send_data(ob).await;
 
-                        // TODO: Send the ChoCh to the websocket
-                        // TODO: Add the ChoCh to the database
+                        let choch = Data::OneDStructure(OneDStructure {
+                            symbol: candle.symbol,
+                            label: OneDStructureLabel::CHOCH,
+                            timerange: candle.timerange,
+                            timestamp: candle.timestamp,
+                            price: subtrend.last_relative_high,
+                            direction: Direction::Bullish,
+                        });
+                        let res = ctx.insert_data(&choch).await;
+                        let res = ctx.send_data(choch).await;
                     }
                 }
                 Direction::Bearish => {
@@ -144,11 +220,28 @@ pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
                         // This means that there is a reversal (Change Of Character)
                         datetime = Some(subtrend.start_time);
 
-                        // TODO: Send the OB to the websocket
-                        // TODO: Add the OB to the database
+                        let ob = Data::TwoDStructure(TwoDStructure {
+                            symbol: candle.symbol,
+                            label: TwoDStructureLabel::OB,
+                            timerange: candle.timerange,
+                            timestamp: candle.timestamp,
+                            high: subtrend.last_candle.high,
+                            low: subtrend.last_candle.low,
+                            direction: Direction::Bearish,
+                        });
+                        let res = ctx.insert_data(&ob).await;
+                        let res = ctx.send_data(ob).await;
 
-                        // TODO: Send the ChoCh to the websocket
-                        // TODO: Add the ChoCh to the database
+                        let choch = Data::OneDStructure(OneDStructure {
+                            symbol: candle.symbol,
+                            label: OneDStructureLabel::CHOCH,
+                            timerange: candle.timerange,
+                            timestamp: candle.timestamp,
+                            price: subtrend.last_relative_low,
+                            direction: Direction::Bearish,
+                        });
+                        let res = ctx.insert_data(&choch).await;
+                        let res = ctx.send_data(choch).await;
                     }
                 }
                 _ => {}
@@ -193,8 +286,9 @@ pub async fn get_trend(candle: &Candle) -> Option<DateTime<Utc>> {
         TRENDS.insert(key, trend);
     }
 
-    // TODO: Send trend to the websocket
-    // TODO: Add trend to the database
+    let trend = Data::Trend(TRENDS.get(&key).unwrap().clone());
+    let res = ctx.insert_data(&trend).await;
+    let res = ctx.send_data(trend).await;
 
     datetime
 }

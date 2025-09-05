@@ -1,7 +1,9 @@
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize)]
 pub enum Symbol {
     EURUSD,
-    Unkwown,
+    Unknown,
 }
 
 impl Symbol {
@@ -9,7 +11,7 @@ impl Symbol {
         match symbol {
             "EURUSD" => Symbol::EURUSD,
             "EUR/USD" => Symbol::EURUSD,
-            _ => Symbol::Unkwown,
+            _ => Symbol::Unknown,
         }
     }
 }

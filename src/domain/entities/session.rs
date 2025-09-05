@@ -4,7 +4,9 @@ use crate::domain::entities::symbol::Symbol;
 use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, Timelike, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
+use serde::Serialize;
 
+#[derive(Clone, Serialize)]
 pub struct Session {
     pub symbol: Symbol,
     pub label: RefSessions,
@@ -66,6 +68,7 @@ pub static REFSESSIONS: &[RefSession] = &[
     },
 ];
 
+#[derive(Clone, Serialize, Eq, PartialEq, Debug)]
 pub enum RefSessions {
     Asian,
     London,
@@ -81,12 +84,12 @@ impl RefSessions {
         let mut end_date = timestamp.date_naive();
 
         // Overnight session adjustment
-        if std::ptr::eq(ref_session, &RefSessions::Asian) {
+        if ref_session == &RefSessions::Asian {
             if timestamp.hour() < REFSESSIONS[0].start.hour()
                 || timestamp.hour() == REFSESSIONS[0].start.hour()
                     && timestamp.minute() < REFSESSIONS[0].start.minute()
             {
-                start_date -= -Duration::days(1);
+                start_date -= Duration::days(1);
             } else {
                 end_date += Duration::days(1);
             }

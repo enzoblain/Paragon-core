@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize)]
 pub struct Timerange {
     pub label: &'static str,
     pub duration_ms: i64,

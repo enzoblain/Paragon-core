@@ -1,19 +1,25 @@
 use core::adapters::channel_adapter::ChannelAdapter;
 use core::application::candle::consume::consume_candles;
 use core::application::candle::publish::publish_candles;
-use core::domain::{
-    entities::candle::Candle,
-    ports::{DataReceiver, DataSender},
-};
+use core::application::context::AppContext;
+use core::application::data::consume::consume_data;
+use core::domain::entities::candle::Candle;
+use core::domain::entities::data::Data;
+use core::domain::ports::{DataReceiver, DataSender};
 
+use std::sync::Arc;
 use tokio_scoped::scope;
 
 #[tokio::main]
 async fn main() {
-    let adapter = ChannelAdapter::new(1); // Because we only have EUR/USD
+    let candle_adapter = ChannelAdapter::new(1); // Because we only have EUR/USD
+    let candle_sender: &dyn DataSender<Candle> = &candle_adapter;
+    let candle_receiver: &dyn DataReceiver<Candle> = &candle_adapter;
 
-    let candle_sender: &dyn DataSender<Candle> = &adapter;
-    let candle_receiver: &dyn DataReceiver<Candle> = &adapter;
+    let data_adapter = Arc::new(ChannelAdapter::new(16));
+    let websocket_receiver: &dyn DataReceiver<Data> = &data_adapter;
+
+    let ctx = AppContext::new("http://localhost:4000/graphql".into(), data_adapter.clone());
 
     scope(|s| {
         s.spawn(async move {
@@ -21,7 +27,11 @@ async fn main() {
         });
 
         s.spawn(async move {
-            consume_candles(candle_receiver).await;
+            consume_candles(&ctx, candle_receiver).await;
+        });
+
+        s.spawn(async move {
+            consume_data(websocket_receiver).await;
         });
     });
 }

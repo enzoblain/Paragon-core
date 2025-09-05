@@ -1,7 +1,9 @@
+use crate::application::context::AppContext;
 use crate::domain::entities::candle::Candle;
+use crate::domain::entities::data::Data;
 use crate::domain::entities::session::{Session, SESSIONS};
 
-pub async fn process_session(candle: &Candle) {
+pub async fn process_session(ctx: &AppContext, candle: &Candle) {
     let key = candle.symbol;
 
     if let Some(mut session) = SESSIONS.get_mut(&key) {
@@ -11,18 +13,21 @@ pub async fn process_session(candle: &Candle) {
             session.close = candle.close;
             session.volume += candle.volume;
 
-            // TODO: Send via websocket
+            let session = Data::Session(session.clone());
+            let res = ctx.send_data(session).await;
 
             return;
         }
 
-        // TODO: Add to the database
+        let session = Data::Session(session.clone());
+        let res = ctx.insert_data(&session).await;
     }
     // If there is no actual session in the same symbol
     // Or if we need to create a new session
     let session = Session::new(candle);
 
-    // TODO: Send via websocket
+    SESSIONS.insert(key, session.clone());
 
-    SESSIONS.insert(key, session);
+    let session = Data::Session(session);
+    let res = ctx.send_data(session).await;
 }
