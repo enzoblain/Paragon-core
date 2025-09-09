@@ -12,5 +12,8 @@ pub trait DataReceiver<T>: Sync {
 }
 
 pub trait DataInserter {
-    fn insert(&self, data: &Data) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>>;
+    fn insert<'a>(
+        &'a self,
+        data: &Data,
+    ) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send + 'a>>;
 }

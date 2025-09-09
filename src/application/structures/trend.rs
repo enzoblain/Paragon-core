@@ -81,8 +81,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.low,
                                 direction: Direction::Bearish,
                             });
-                            let res = ctx.insert_data(&bos).await;
-                            let res = ctx.send_data(bos).await;
+                            ctx.insert_data(&bos).await;
+                            ctx.send_data(bos).await;
 
                             let rh = Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
@@ -92,8 +92,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.high,
                                 direction: Direction::Bearish,
                             });
-                            let res = ctx.insert_data(&rh).await;
-                            let res = ctx.send_data(rh).await;
+                            ctx.insert_data(&rh).await;
+                            ctx.send_data(rh).await;
 
                             let rl = Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
@@ -103,8 +103,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.low,
                                 direction: Direction::Bearish,
                             });
-                            let res = ctx.insert_data(&rl).await;
-                            let res = ctx.send_data(rl).await;
+                            ctx.insert_data(&rl).await;
+                            ctx.send_data(rl).await;
 
                             SUBTRENDS.remove(&key);
                         } else if candle.high > subtrend.high {
@@ -130,8 +130,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.high,
                                 direction: Direction::Bullish,
                             });
-                            let res = ctx.insert_data(&bos).await;
-                            let res = ctx.send_data(bos).await;
+                            ctx.insert_data(&bos).await;
+                            ctx.send_data(bos).await;
 
                             let rh = Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
@@ -141,8 +141,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.high,
                                 direction: Direction::Bullish,
                             });
-                            let res = ctx.insert_data(&rh).await;
-                            let res = ctx.send_data(rh).await;
+                            ctx.insert_data(&rh).await;
+                            ctx.send_data(rh).await;
 
                             let rl = Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
@@ -152,8 +152,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                                 price: subtrend.low,
                                 direction: Direction::Bullish,
                             });
-                            let res = ctx.insert_data(&rl).await;
-                            let res = ctx.send_data(rl).await;
+                            ctx.insert_data(&rl).await;
+                            ctx.send_data(rl).await;
 
                             SUBTRENDS.remove(&key);
                         } else if candle.low < subtrend.low {
@@ -196,8 +196,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             low: subtrend.last_candle.low,
                             direction: Direction::Bullish,
                         });
-                        let res = ctx.insert_data(&ob).await;
-                        let res = ctx.send_data(ob).await;
+                        ctx.insert_data(&ob).await;
+                        ctx.send_data(ob).await;
 
                         let choch = Data::OneDStructure(OneDStructure {
                             symbol: candle.symbol,
@@ -207,8 +207,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             price: subtrend.last_relative_high,
                             direction: Direction::Bullish,
                         });
-                        let res = ctx.insert_data(&choch).await;
-                        let res = ctx.send_data(choch).await;
+                        ctx.insert_data(&choch).await;
+                        ctx.send_data(choch).await;
                     }
                 }
                 Direction::Bearish => {
@@ -229,8 +229,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             low: subtrend.last_candle.low,
                             direction: Direction::Bearish,
                         });
-                        let res = ctx.insert_data(&ob).await;
-                        let res = ctx.send_data(ob).await;
+                        ctx.insert_data(&ob).await;
+                        ctx.send_data(ob).await;
 
                         let choch = Data::OneDStructure(OneDStructure {
                             symbol: candle.symbol,
@@ -240,8 +240,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             price: subtrend.last_relative_low,
                             direction: Direction::Bearish,
                         });
-                        let res = ctx.insert_data(&choch).await;
-                        let res = ctx.send_data(choch).await;
+                        ctx.insert_data(&choch).await;
+                        ctx.send_data(choch).await;
                     }
                 }
                 _ => {}
@@ -287,8 +287,8 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
     }
 
     let trend = Data::Trend(TRENDS.get(&key).unwrap().clone());
-    let res = ctx.insert_data(&trend).await;
-    let res = ctx.send_data(trend).await;
+    ctx.insert_data(&trend).await;
+    ctx.send_data(trend).await;
 
     datetime
 }

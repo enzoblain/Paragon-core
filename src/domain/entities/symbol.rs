@@ -14,4 +14,11 @@ impl Symbol {
             _ => Symbol::Unknown,
         }
     }
+
+    pub fn into_text(&self) -> &'static str {
+        match self {
+            Symbol::EURUSD => "EUR/USD",
+            Symbol::Unknown => "Unknown",
+        }
+    }
 }

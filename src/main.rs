@@ -1,4 +1,5 @@
 use core::adapters::channel_adapter::ChannelAdapter;
+use core::adapters::rest_data_inserter::RestDataInserter;
 use core::application::candle::consume::consume_candles;
 use core::application::candle::publish::publish_candles;
 use core::application::context::AppContext;
@@ -19,7 +20,8 @@ async fn main() {
     let data_adapter = Arc::new(ChannelAdapter::new(16));
     let websocket_receiver: &dyn DataReceiver<Data> = &data_adapter;
 
-    let ctx = AppContext::new("http://localhost:4000/graphql".into(), data_adapter.clone());
+    let data_inserter = RestDataInserter::new("http://localhost:4000/graphql".into());
+    let ctx = AppContext::new(data_inserter, data_adapter.clone());
 
     scope(|s| {
         s.spawn(async move {

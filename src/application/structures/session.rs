@@ -14,13 +14,13 @@ pub async fn process_session(ctx: &AppContext, candle: &Candle) {
             session.volume += candle.volume;
 
             let session = Data::Session(session.clone());
-            let res = ctx.send_data(session).await;
+            ctx.send_data(session).await;
 
             return;
         }
 
         let session = Data::Session(session.clone());
-        let res = ctx.insert_data(&session).await;
+        ctx.insert_data(&session).await;
     }
     // If there is no actual session in the same symbol
     // Or if we need to create a new session
@@ -29,5 +29,5 @@ pub async fn process_session(ctx: &AppContext, candle: &Candle) {
     SESSIONS.insert(key, session.clone());
 
     let session = Data::Session(session);
-    let res = ctx.send_data(session).await;
+    ctx.send_data(session).await;
 }

@@ -45,8 +45,8 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
                     low: first.open,
                     direction: Direction::Bullish,
                 });
-                let res = ctx.insert_data(&fvg).await;
-                let res = ctx.send_data(fvg).await;
+                ctx.insert_data(&fvg).await;
+                ctx.send_data(fvg).await;
             }
         }
         Direction::Bearish => {
@@ -63,8 +63,8 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
                     low: third.close,
                     direction: Direction::Bearish,
                 });
-                let res = ctx.insert_data(&fvg).await;
-                let res = ctx.send_data(fvg).await;
+                ctx.insert_data(&fvg).await;
+                ctx.send_data(fvg).await;
             }
         }
         Direction::Doji => {}

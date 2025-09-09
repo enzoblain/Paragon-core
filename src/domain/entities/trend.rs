@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use serde_json::{json, Value};
 
 pub static QUEUE: Lazy<DashMap<(Symbol, &'static Timerange), Vec<Candle>>> =
     Lazy::new(DashMap::new);
@@ -27,6 +28,20 @@ pub struct Trend {
     pub low_datetime: Option<DateTime<Utc>>,
     pub relative_high: Option<f64>,
     pub relative_low: Option<f64>,
+}
+
+impl Trend {
+    pub fn into_request(&self) -> Value {
+        json!({
+            "symbol": self.symbol,
+            "timerange": self.timerange.label,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "direction": self.direction.into_text(),
+            "high": self.high,
+            "low": self.low,
+        })
+    }
 }
 
 pub struct Subtrend {

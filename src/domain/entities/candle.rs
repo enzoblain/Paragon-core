@@ -6,6 +6,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use serde_json::{json, Value};
 use std::cmp::Ordering;
 
 #[derive(Clone, Debug, Serialize)]
@@ -70,6 +71,25 @@ impl Candle {
             Some(Ordering::Less) => Direction::Bearish,
             _ => Direction::Doji,
         }
+    }
+
+    pub fn into_request(&self) -> Value {
+        let data = json!({
+                "type": "Candle",
+                "data": {
+                    "symbol": self.symbol,
+                    "timerange": self.timerange.label,
+                    "timestamp": self.timestamp,
+                    "open": self.open,
+                    "high": self.high,
+                    "low": self.low,
+                    "close": self.close,
+                    "volume": self.volume,
+                    "direction": self.direction.into_text(),
+                }
+        });
+
+        data
     }
 }
 

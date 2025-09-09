@@ -34,8 +34,7 @@ pub async fn aggregate_candle(ctx: &AppContext, candle: &Candle, timerange: &'st
     if let Some(mut last_candle) = CANDLES.get_mut(&key) {
         // If the new candle's timestamp is within the current candle's time range
         if candle.timestamp >= last_candle.end_timestamp {
-            let res = ctx
-                .insert_data(&Data::Candle(last_candle.value().clone()))
+            ctx.insert_data(&Data::Candle(last_candle.value().clone()))
                 .await;
 
             process_trend(ctx, &last_candle).await;
@@ -75,5 +74,5 @@ pub async fn aggregate_candle(ctx: &AppContext, candle: &Candle, timerange: &'st
     }
 
     let candle = Data::Candle(candle.clone());
-    let res = ctx.send_data(candle).await;
+    ctx.send_data(candle).await;
 }

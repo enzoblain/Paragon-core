@@ -5,6 +5,7 @@ use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, Timelike, Utc};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use serde_json::{json, Value};
 
 #[derive(Clone, Serialize)]
 pub struct Session {
@@ -22,6 +23,20 @@ pub struct Session {
 impl Session {
     pub fn contains(&self, candle: &Candle) -> bool {
         candle.timestamp >= self.start_time && candle.timestamp < self.end_time
+    }
+
+    pub fn into_request(&self) -> Value {
+        json!({
+            "symbol": self.symbol,
+            "label": self.label.into_text(),
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "high": self.high,
+            "low": self.low,
+            "open": self.open,
+            "close": self.close,
+            "volume": self.volume,
+        })
     }
 
     pub fn new(candle: &Candle) -> Self {
@@ -137,6 +152,14 @@ impl RefSessions {
             }
         }
         None
+    }
+
+    pub fn into_text(&self) -> &'static str {
+        match self {
+            RefSessions::Asian => "Asian",
+            RefSessions::London => "London",
+            RefSessions::NewYork => "New York",
+        }
     }
 }
 
