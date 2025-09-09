@@ -23,4 +23,8 @@ impl Data {
             Data::TwoDStructure(structure) => structure.into_request(),
         }
     }
+
+    pub fn into_string(&self) -> String {
+        self.into_request().to_string()
+    }
 }
