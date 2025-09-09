@@ -6,7 +6,7 @@
 
 ## 🚧 Project Status
 
-> 🛠️ Currently refactoring the project to use hexagonal architecture
+> 🛠️ Currently refactoring the trend detection algorithm
 
 ---
 

@@ -11,7 +11,6 @@ use tokio_scoped::scope;
 
 pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(ctx: &AppContext, receiver: &S) {
     while let Some(candle) = receiver.receive_data().await {
-        let start = std::time::Instant::now();
         scope(|s| {
             for timerange in TIMERANGES {
                 s.spawn(async {
@@ -23,8 +22,6 @@ pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(ctx: &AppContext,
                 process_session(ctx, &candle).await;
             });
         });
-        let duration = start.elapsed();
-        println!("Time elapsed in consume_candles() is: {:?}", duration);
     }
 }
 
