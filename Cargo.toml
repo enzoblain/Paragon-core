@@ -1,26 +1,21 @@
 [package]
 name = "core"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
 
 [dependencies]
-base64 = "0.22.1"
 chrono = { version = "0.4.41", features = ["serde"] }
-common = { path = "../Common" }
 dashmap = "6.1.0"
-deadpool-postgres = "0.14.1"
-futures = "0.3.31"
-futures-util = "0.3.31"
-http = "1.3.1"
-jsonwebtoken = "9.3.1"
 once_cell = "1.21.3"
-polars = { version = "0.48.1", features = ["parquet", "timezones"] }
-rand = "0.9.2"
+planus = { version = "=1.1.1" } # Temporary fix for planus issue https://github.com/pola-rs/polars/issues/24208
+polars = { version = "0.50.0", features = ["parquet", "timezones"] }
 reqwest = { version = "0.12.23", features = ["json"] }
 serde = "1.0.219"
-serde_json = "1.0.140"
-server = { path = "../Server" }
-tokio = { version = "1.47.0" , features = ["full"] }
-tokio-postgres = { version = "0.7.13", features = ["with-chrono-0_4"] }
-tokio-tungstenite = "0.24.0"
-url = "2.5.4"
+serde_json = "1.0.143"
+tokio = { version = "1.47.1", features = ["full"] }
+tokio-scoped = "0.2.0"

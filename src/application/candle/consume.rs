@@ -1,0 +1,78 @@
+use crate::application::context::AppContext;
+use crate::application::structures::fvg::process_fvg;
+use crate::application::structures::session::process_session;
+use crate::application::structures::trend::process_trend;
+use crate::domain::entities::candle::{Candle, CANDLES};
+use crate::domain::entities::data::Data;
+use crate::domain::entities::timerange::{Timerange, TIMERANGES};
+use crate::domain::ports::DataReceiver;
+
+use tokio_scoped::scope;
+
+pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(ctx: &AppContext, receiver: &S) {
+    while let Some(candle) = receiver.receive_data().await {
+        let start = std::time::Instant::now();
+        scope(|s| {
+            for timerange in TIMERANGES {
+                s.spawn(async {
+                    aggregate_candle(ctx, &candle, timerange).await;
+                });
+            }
+
+            s.spawn(async {
+                process_session(ctx, &candle).await;
+            });
+        });
+        let duration = start.elapsed();
+        println!("Time elapsed in consume_candles() is: {:?}", duration);
+    }
+}
+
+pub async fn aggregate_candle(ctx: &AppContext, candle: &Candle, timerange: &'static Timerange) {
+    let key = (candle.symbol, timerange.label);
+
+    if let Some(mut last_candle) = CANDLES.get_mut(&key) {
+        // If the new candle's timestamp is within the current candle's time range
+        if candle.timestamp >= last_candle.end_timestamp {
+            ctx.insert_data(&Data::Candle(last_candle.value().clone()))
+                .await;
+
+            process_trend(ctx, &last_candle).await;
+            process_fvg(ctx, &last_candle).await;
+
+            *last_candle = Candle::new(
+                candle.symbol,
+                timerange,
+                candle.timestamp,
+                candle.open,
+                candle.high,
+                candle.low,
+                candle.close,
+                candle.volume,
+            );
+        } else {
+            // If the new candle is in the same timerange
+            last_candle.high = last_candle.high.max(candle.high);
+            last_candle.low = last_candle.low.min(candle.low);
+            last_candle.close = candle.close;
+            last_candle.volume += candle.volume;
+        }
+    } else {
+        // If there isn't candle stored in the actual timerange
+        let new_candle = Candle::new(
+            candle.symbol,
+            timerange,
+            candle.timestamp,
+            candle.open,
+            candle.high,
+            candle.low,
+            candle.close,
+            candle.volume,
+        );
+
+        CANDLES.insert(key, new_candle);
+    }
+
+    let candle = Data::Candle(candle.clone());
+    ctx.send_data(candle).await;
+}

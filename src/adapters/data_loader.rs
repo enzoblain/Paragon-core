@@ -1,25 +1,21 @@
-// This should only be used in development and testing environments.
-// It will store the functions that won't be used in production.
-use crate::Candle;
+use crate::domain::entities::candle::Candle;
+use crate::domain::entities::symbol::Symbol;
+use crate::domain::entities::timerange::TIMERANGES;
 
 use chrono::{DateTime, Utc};
-use polars::{prelude::*,
-            frame::row::Row
-};
+use polars::{frame::row::Row, prelude::*};
 use std::fs::File;
 
 pub fn get_data() -> Result<DataFrame, PolarsError> {
-    ParquetReader::new(File::open("data/EURUSD.parquet")?)
-        .finish()
+    ParquetReader::new(File::open("data/EURUSD.parquet")?).finish()
 }
 
-// Because a Row.0 is vec of AnyValue, I iter over it
-// The form I have in data is: datetime, open, high, low, close, volume
-// It checks the type of each value and returns a Candle struct
 pub fn parse_candle(row: Row) -> Result<Candle, String> {
     let datetime = if let AnyValue::Datetime(ts, TimeUnit::Microseconds, _) = row.0[0] {
         DateTime::<Utc>::from_naive_utc_and_offset(
-            DateTime::from_timestamp_micros(ts).expect("timestamp invalide").naive_local(),
+            DateTime::from_timestamp_micros(ts)
+                .expect("timestamp invalide")
+                .naive_local(),
             Utc,
         )
     } else {
@@ -56,10 +52,9 @@ pub fn parse_candle(row: Row) -> Result<Candle, String> {
         Err("Invalid 'volume' value in row: {row}")?
     };
 
-
     Ok(Candle::new(
-        "EURUSD".to_string(), // EUR/USD is the only symbol in the data
-        "1m".to_string(),  // 1 minute is the only timerange in the data
+        Symbol::EURUSD, // EUR/USD is the only symbol in the data
+        &TIMERANGES[0], // We only add 1m candles for now
         datetime,
         open,
         high,

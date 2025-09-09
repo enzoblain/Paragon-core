@@ -1,98 +1,39 @@
-use core::{
-    connections::{
-        database::{
-            init_database_data,
-            reset_database_data,
-            send_data_to_database,
-        },
-        websocket::{
-            create_channel,
-            websocket_connection
-        }},
-    handlers::{
-        candle::aggregate_candle,
-        sessions::process_session
-    }, 
-    utils::temporary,
-    TIMERANGES
-};
+use core::adapters::channel_adapter::ChannelAdapter;
+use core::adapters::rest_data_inserter::RestDataInserter;
+use core::application::candle::consume::consume_candles;
+use core::application::candle::publish::publish_candles;
+use core::application::context::AppContext;
+use core::application::data::consume::consume_data;
+use core::domain::entities::candle::Candle;
+use core::domain::entities::data::Data;
+use core::domain::ports::{DataReceiver, DataSender};
 
-use common::utils::log::{
-    LogFile,
-    LogLevel
-};
-use futures::future::join_all;
 use std::sync::Arc;
+use tokio_scoped::scope;
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
-    let rx = create_channel()?;
+async fn main() {
+    let candle_adapter = ChannelAdapter::new(1); // Because we only have EUR/USD
+    let candle_sender: &dyn DataSender<Candle> = &candle_adapter;
+    let candle_receiver: &dyn DataReceiver<Candle> = &candle_adapter;
 
-    let websocket_connection = tokio::spawn(async move {
-        // Establish the WebSocket connection
-        websocket_connection(rx).await
-            .map_err(|e| format!("WebSocket connection error: {}", e))
+    let data_adapter = Arc::new(ChannelAdapter::new(16));
+    let websocket_receiver: &dyn DataReceiver<Data> = &data_adapter;
+
+    let data_inserter = RestDataInserter::new("http://localhost:4000/graphql".into());
+    let ctx = AppContext::new(data_inserter, data_adapter.clone());
+
+    scope(|s| {
+        s.spawn(async move {
+            publish_candles(candle_sender).await;
+        });
+
+        s.spawn(async move {
+            consume_candles(&ctx, candle_receiver).await;
+        });
+
+        s.spawn(async move {
+            consume_data(websocket_receiver).await;
+        });
     });
-
-    let main_task = tokio::spawn(async move {   
-        let data = temporary::get_data().map_err(|e| e.to_string())?;
-
-        for index in 0..data.height() {
-            init_database_data("EURUSD");
-
-            let row = data.get_row(index).map_err(|e| e.to_string())?;
-            let parsed_candle = temporary::parse_candle(row).map_err(|e| e.to_string())?;
-
-            let candle = Arc::new(parsed_candle);
-
-            let mut handles = Vec::new();
-
-            // Spawn a task for each timerange to aggregate the candle
-            for timerange in TIMERANGES.iter() {
-                let cloned_candle = Arc::clone(&candle);
-                let task = tokio::spawn(async move {
-                    aggregate_candle(cloned_candle, "EURUSD", timerange).await
-                });
-
-                handles.push(task);
-            }
-
-            let cloned_candle = Arc::clone(&candle);
-            let task = tokio::spawn(async move {
-                if let Err(e) = process_session(cloned_candle, "EURUSD").await {
-                    eprintln!("Error processing session: {}", e);
-                }
-            });
-
-            handles.push(task);
-
-            let _ = join_all(handles).await; 
-
-            if let Err(e) = send_data_to_database("EURUSD").await {
-                LogFile::add_log(LogLevel::Error, &format!("Error sending data to database: {}", e)).ok();
-            } else {
-                LogFile::add_log(LogLevel::Info, "Data sent to database successfully").ok();
-            }
-
-            reset_database_data("EURUSD");
-
-            // Wait 5 seconds
-            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-        }
-
-        Ok::<(), String>(())
-    });
-
-    tokio::select! {
-        res = websocket_connection => match res {
-            Ok(Ok(())) => return Err("WebSocket connection finished without error but too early".into()),
-            Ok(Err(e)) => return Err(format!("WebSocket connection error: {}", e)),
-            Err(e) => return Err(format!("WebSocket connection panic : {}", e)),
-        },
-        res = main_task => match res {
-            Ok(Ok(())) => return Err("Main task finished without error but too early".into()),
-            Ok(Err(e)) => return Err(format!("Main task error: {}", e)),
-            Err(e) => return Err(format!("Main panic : {}", e)),
-        },
-    }
 }
