@@ -5,6 +5,7 @@ use crate::domain::entities::trend::Trend;
 
 use serde_json::Value;
 
+#[derive(Clone)]
 pub enum Data {
     Candle(Candle),
     OneDStructure(OneDStructure),

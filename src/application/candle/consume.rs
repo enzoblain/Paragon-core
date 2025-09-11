@@ -7,6 +7,7 @@ use crate::domain::entities::data::Data;
 use crate::domain::entities::timerange::{Timerange, TIMERANGES};
 use crate::domain::ports::DataReceiver;
 
+use std::sync::Arc;
 use tokio_scoped::scope;
 
 pub async fn consume_candles<S: DataReceiver<Candle> + ?Sized>(ctx: &AppContext, receiver: &S) {
@@ -31,7 +32,7 @@ pub async fn aggregate_candle(ctx: &AppContext, candle: &Candle, timerange: &'st
     if let Some(mut last_candle) = CANDLES.get_mut(&key) {
         // If the new candle's timestamp is within the current candle's time range
         if candle.timestamp >= last_candle.end_timestamp {
-            ctx.insert_data(&Data::Candle(last_candle.value().clone()))
+            ctx.insert_data(Arc::new(Data::Candle(last_candle.value().clone())))
                 .await;
 
             process_trend(ctx, &last_candle).await;
@@ -70,6 +71,7 @@ pub async fn aggregate_candle(ctx: &AppContext, candle: &Candle, timerange: &'st
         CANDLES.insert(key, new_candle);
     }
 
-    let candle = Data::Candle(candle.clone());
+    let candle = Arc::new(Data::Candle(candle.clone()));
+
     ctx.send_data(candle).await;
 }

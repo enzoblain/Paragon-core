@@ -4,7 +4,7 @@ use core::adapters::websocket_data_sender::WebsocketDataSender;
 use core::application::candle::consume::consume_candles;
 use core::application::candle::publish::publish_candles;
 use core::application::context::AppContext;
-use core::application::data::consume::consume_data;
+use core::application::data::consume::{insert_data, send_data};
 use core::domain::entities::candle::Candle;
 use core::domain::entities::data::Data;
 use core::domain::ports::{DataReceiver, DataSender};
@@ -18,12 +18,14 @@ async fn main() {
     let candle_sender: &dyn DataSender<Candle> = &candle_adapter;
     let candle_receiver: &dyn DataReceiver<Candle> = &candle_adapter;
 
-    let data_adapter = Arc::new(ChannelAdapter::new(16));
-    let websocket_receiver: &dyn DataReceiver<Data> = &data_adapter;
+    let websocket_adapter = Arc::new(ChannelAdapter::new(16));
+    let websocket_receiver: &dyn DataReceiver<Arc<Data>> = &websocket_adapter;
     let data_sender = WebsocketDataSender::new("ws://localhost:8080/ws".into());
 
+    let rest_adapter = Arc::new(ChannelAdapter::new(16));
+    let rest_receiver: &dyn DataReceiver<Arc<Data>> = &rest_adapter;
     let data_inserter = RestDataInserter::new("http://localhost:4000/graphql".into());
-    let ctx = AppContext::new(data_inserter, data_adapter.clone());
+    let ctx = AppContext::new(rest_adapter.clone(), websocket_adapter.clone());
 
     scope(|s| {
         s.spawn(async move {
@@ -35,7 +37,11 @@ async fn main() {
         });
 
         s.spawn(async move {
-            consume_data(websocket_receiver, data_sender).await;
+            send_data(websocket_receiver, data_sender).await;
+        });
+
+        s.spawn(async move {
+            insert_data(rest_receiver, data_inserter).await;
         });
     });
 }

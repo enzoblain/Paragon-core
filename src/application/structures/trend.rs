@@ -1,5 +1,3 @@
-use chrono::{DateTime, Utc};
-
 use crate::application::context::AppContext;
 use crate::domain::entities::candle::Candle;
 use crate::domain::entities::data::Data;
@@ -10,6 +8,9 @@ use crate::domain::entities::structures::{
 use crate::domain::entities::symbol::Symbol;
 use crate::domain::entities::timerange::Timerange;
 use crate::domain::entities::trend::{Subtrend, Trend, QUEUE, SUBTRENDS, TRENDS};
+
+use chrono::{DateTime, Utc};
+use std::sync::Arc;
 
 pub async fn process_trend(ctx: &AppContext, candle: &Candle) {
     let key = (candle.symbol, candle.timerange);
@@ -22,9 +23,8 @@ pub async fn process_trend(ctx: &AppContext, candle: &Candle) {
         };
 
         process_queue(&key, datetime);
-
         let queue = match QUEUE.get(&key) {
-            Some(q) => q,
+            Some(q) => q.clone(),
             None => break,
         };
 
@@ -55,6 +55,7 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
     let key = (candle.symbol, candle.timerange);
 
     let mut datetime = None;
+    let mut should_remove_subtrend = false;
 
     if let Some(mut trend) = TRENDS.get_mut(&key) {
         if candle.direction == trend.direction {
@@ -73,40 +74,40 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             // And we can update the trend
                             trend.high = subtrend.high;
 
-                            let bos = Data::OneDStructure(OneDStructure {
+                            let bos = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::BOS,
                                 timerange: candle.timerange,
                                 timestamp: candle.timestamp,
                                 price: subtrend.low,
                                 direction: Direction::Bearish,
-                            });
-                            ctx.insert_data(&bos).await;
+                            }));
+                            ctx.insert_data(bos.clone()).await;
                             ctx.send_data(bos).await;
 
-                            let rh = Data::OneDStructure(OneDStructure {
+                            let rh = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::RH,
                                 timerange: candle.timerange,
                                 timestamp: subtrend.last_relative_high_datetime,
                                 price: subtrend.high,
                                 direction: Direction::Bearish,
-                            });
-                            ctx.insert_data(&rh).await;
+                            }));
+                            ctx.insert_data(rh.clone()).await;
                             ctx.send_data(rh).await;
 
-                            let rl = Data::OneDStructure(OneDStructure {
+                            let rl = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::RL,
                                 timerange: candle.timerange,
                                 timestamp: subtrend.last_relative_low_datetime,
                                 price: subtrend.low,
                                 direction: Direction::Bearish,
-                            });
-                            ctx.insert_data(&rl).await;
+                            }));
+                            ctx.insert_data(rl.clone()).await;
                             ctx.send_data(rl).await;
 
-                            SUBTRENDS.remove(&key);
+                            should_remove_subtrend = true;
                         } else if candle.high > subtrend.high {
                             subtrend.high = candle.high;
                             subtrend.last_relative_high_datetime = candle.timestamp;
@@ -122,40 +123,40 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             // And we can update the trend
                             trend.low = subtrend.low;
 
-                            let bos = Data::OneDStructure(OneDStructure {
+                            let bos = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::BOS,
                                 timerange: candle.timerange,
                                 timestamp: candle.timestamp,
                                 price: subtrend.high,
                                 direction: Direction::Bullish,
-                            });
-                            ctx.insert_data(&bos).await;
+                            }));
+                            ctx.insert_data(bos.clone()).await;
                             ctx.send_data(bos).await;
 
-                            let rh = Data::OneDStructure(OneDStructure {
+                            let rh = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::RH,
                                 timerange: candle.timerange,
                                 timestamp: subtrend.last_relative_high_datetime,
                                 price: subtrend.high,
                                 direction: Direction::Bullish,
-                            });
-                            ctx.insert_data(&rh).await;
+                            }));
+                            ctx.insert_data(rh.clone()).await;
                             ctx.send_data(rh).await;
 
-                            let rl = Data::OneDStructure(OneDStructure {
+                            let rl = Arc::new(Data::OneDStructure(OneDStructure {
                                 symbol: candle.symbol,
                                 label: OneDStructureLabel::RL,
                                 timerange: candle.timerange,
                                 timestamp: subtrend.last_relative_low_datetime,
                                 price: subtrend.low,
                                 direction: Direction::Bullish,
-                            });
-                            ctx.insert_data(&rl).await;
+                            }));
+                            ctx.insert_data(rl.clone()).await;
                             ctx.send_data(rl).await;
 
-                            SUBTRENDS.remove(&key);
+                            should_remove_subtrend = true;
                         } else if candle.low < subtrend.low {
                             subtrend.low = candle.low;
                             subtrend.last_relative_low_datetime = candle.timestamp;
@@ -187,7 +188,7 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                         // This means that there is a reversal (Change Of Character)
                         datetime = Some(subtrend.start_time);
 
-                        let ob = Data::TwoDStructure(TwoDStructure {
+                        let ob = Arc::new(Data::TwoDStructure(TwoDStructure {
                             symbol: candle.symbol,
                             label: TwoDStructureLabel::OB,
                             timerange: candle.timerange,
@@ -195,19 +196,19 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             high: subtrend.last_candle.high,
                             low: subtrend.last_candle.low,
                             direction: Direction::Bullish,
-                        });
-                        ctx.insert_data(&ob).await;
+                        }));
+                        ctx.insert_data(ob.clone()).await;
                         ctx.send_data(ob).await;
 
-                        let choch = Data::OneDStructure(OneDStructure {
+                        let choch = Arc::new(Data::OneDStructure(OneDStructure {
                             symbol: candle.symbol,
                             label: OneDStructureLabel::CHOCH,
                             timerange: candle.timerange,
                             timestamp: candle.timestamp,
                             price: subtrend.last_relative_high,
                             direction: Direction::Bullish,
-                        });
-                        ctx.insert_data(&choch).await;
+                        }));
+                        ctx.insert_data(choch.clone()).await;
                         ctx.send_data(choch).await;
                     }
                 }
@@ -220,7 +221,7 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                         // This means that there is a reversal (Change Of Character)
                         datetime = Some(subtrend.start_time);
 
-                        let ob = Data::TwoDStructure(TwoDStructure {
+                        let ob = Arc::new(Data::TwoDStructure(TwoDStructure {
                             symbol: candle.symbol,
                             label: TwoDStructureLabel::OB,
                             timerange: candle.timerange,
@@ -228,19 +229,19 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
                             high: subtrend.last_candle.high,
                             low: subtrend.last_candle.low,
                             direction: Direction::Bearish,
-                        });
-                        ctx.insert_data(&ob).await;
+                        }));
+                        ctx.insert_data(ob.clone()).await;
                         ctx.send_data(ob).await;
 
-                        let choch = Data::OneDStructure(OneDStructure {
+                        let choch = Arc::new(Data::OneDStructure(OneDStructure {
                             symbol: candle.symbol,
                             label: OneDStructureLabel::CHOCH,
                             timerange: candle.timerange,
                             timestamp: candle.timestamp,
                             price: subtrend.last_relative_low,
                             direction: Direction::Bearish,
-                        });
-                        ctx.insert_data(&choch).await;
+                        }));
+                        ctx.insert_data(choch.clone()).await;
                         ctx.send_data(choch).await;
                     }
                 }
@@ -286,8 +287,12 @@ pub async fn get_trend(ctx: &AppContext, candle: &Candle) -> Option<DateTime<Utc
         TRENDS.insert(key, trend);
     }
 
-    let trend = Data::Trend(TRENDS.get(&key).unwrap().clone());
-    ctx.insert_data(&trend).await;
+    if should_remove_subtrend {
+        SUBTRENDS.remove(&key);
+    }
+
+    let trend = Arc::new(Data::Trend(TRENDS.get(&key).unwrap().clone()));
+    ctx.insert_data(trend.clone()).await;
     ctx.send_data(trend).await;
 
     datetime

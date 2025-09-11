@@ -3,6 +3,8 @@ use crate::domain::entities::candle::Candle;
 use crate::domain::entities::data::Data;
 use crate::domain::entities::session::{Session, SESSIONS};
 
+use std::sync::Arc;
+
 pub async fn process_session(ctx: &AppContext, candle: &Candle) {
     let key = candle.symbol;
 
@@ -13,14 +15,14 @@ pub async fn process_session(ctx: &AppContext, candle: &Candle) {
             session.close = candle.close;
             session.volume += candle.volume;
 
-            let session = Data::Session(session.clone());
+            let session = Arc::new(Data::Session(session.clone()));
             ctx.send_data(session).await;
 
             return;
         }
 
-        let session = Data::Session(session.clone());
-        ctx.insert_data(&session).await;
+        let session = Arc::new(Data::Session(session.clone()));
+        ctx.insert_data(session).await;
     }
     // If there is no actual session in the same symbol
     // Or if we need to create a new session
@@ -28,6 +30,6 @@ pub async fn process_session(ctx: &AppContext, candle: &Candle) {
 
     SESSIONS.insert(key, session.clone());
 
-    let session = Data::Session(session);
+    let session = Arc::new(Data::Session(session));
     ctx.send_data(session).await;
 }

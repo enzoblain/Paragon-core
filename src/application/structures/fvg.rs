@@ -5,6 +5,8 @@ use crate::domain::entities::direction::Direction;
 use crate::domain::entities::fvg::LAST_THREE_CANDLES;
 use crate::domain::entities::structures::{TwoDStructure, TwoDStructureLabel};
 
+use std::sync::Arc;
+
 pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
     let key = (candle.symbol, candle.timerange);
 
@@ -36,7 +38,7 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
             let third = &last_three_candles[2];
 
             if third.close < first.open {
-                let fvg = Data::TwoDStructure(TwoDStructure {
+                let fvg = Arc::new(Data::TwoDStructure(TwoDStructure {
                     symbol: candle.symbol,
                     label: TwoDStructureLabel::FVG,
                     timerange: candle.timerange,
@@ -44,8 +46,8 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
                     high: third.close,
                     low: first.open,
                     direction: Direction::Bullish,
-                });
-                ctx.insert_data(&fvg).await;
+                }));
+                ctx.insert_data(fvg.clone()).await;
                 ctx.send_data(fvg).await;
             }
         }
@@ -54,7 +56,7 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
             let third = &last_three_candles[2];
 
             if third.close > first.open {
-                let fvg = Data::TwoDStructure(TwoDStructure {
+                let fvg = Arc::new(Data::TwoDStructure(TwoDStructure {
                     symbol: candle.symbol,
                     label: TwoDStructureLabel::FVG,
                     timerange: candle.timerange,
@@ -62,8 +64,9 @@ pub async fn process_fvg(ctx: &AppContext, candle: &Candle) {
                     high: first.open,
                     low: third.close,
                     direction: Direction::Bearish,
-                });
-                ctx.insert_data(&fvg).await;
+                }));
+
+                ctx.insert_data(fvg.clone()).await;
                 ctx.send_data(fvg).await;
             }
         }

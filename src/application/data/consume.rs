@@ -1,12 +1,25 @@
+use crate::adapters::rest_data_inserter::RestDataInserter;
 use crate::adapters::websocket_data_sender::WebsocketDataSender;
 use crate::domain::entities::data::Data;
-use crate::domain::ports::DataReceiver;
+use crate::domain::ports::{DataInserter, DataReceiver};
 
 use futures_util::SinkExt;
+use std::sync::Arc;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
-pub async fn consume_data<S: DataReceiver<Data> + ?Sized>(
+pub async fn insert_data<S: DataReceiver<Arc<Data>> + ?Sized>(
+    receiver: &S,
+    inserter: RestDataInserter,
+) {
+    while let Some(data) = receiver.receive_data().await {
+        if let Err(e) = inserter.insert(&data).await {
+            eprintln!("Error inserting data: {}", e);
+        }
+    }
+}
+
+pub async fn send_data<S: DataReceiver<Arc<Data>> + ?Sized>(
     receiver: &S,
     sender: WebsocketDataSender,
 ) {

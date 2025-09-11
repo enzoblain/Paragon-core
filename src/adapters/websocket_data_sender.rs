@@ -13,7 +13,7 @@ impl WebsocketDataSender {
         let token = if let Ok(t) = std::env::var("WS_TOKEN") {
             t
         } else {
-            eprintln!("Warning: API_TOKEN not set. Using empty token.");
+            eprintln!("Warning: WS_TOKEN not set. Using empty token.");
             String::new()
         };
 

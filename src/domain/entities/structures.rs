@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{json, Value};
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub enum OneDStructureLabel {
     BOS,
     CHOCH,
@@ -25,7 +25,7 @@ impl OneDStructureLabel {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct OneDStructure {
     pub symbol: Symbol,
     pub label: OneDStructureLabel,
@@ -48,7 +48,7 @@ impl OneDStructure {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub enum TwoDStructureLabel {
     OB,
     FVG,
@@ -63,7 +63,7 @@ impl TwoDStructureLabel {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct TwoDStructure {
     pub symbol: Symbol,
     pub label: TwoDStructureLabel,
